@@ -1,0 +1,75 @@
+{
+  "pages": [
+    {
+      "path": "src/pages/index/index",
+      "style": {
+        "navigationBarTitleText": "管网巡检",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "src/pages/upload/upload",
+      "style": {
+        "navigationBarTitleText": "上报信息"
+      }
+    },
+    {
+      "path": "src/pages/login/login",
+      "style": {
+        "navigationBarTitleText": "工程师登录",
+        "navigationBarBackgroundColor": "#1890ff",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "src/pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "src/pages/map/map",
+      "style": {
+        "navigationBarTitleText": "点位地图"
+      }
+    },
+    {
+      "path": "src/pages/detail/detail",
+      "style": {
+        "navigationBarTitleText": "详情"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "管网巡检",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#7A7E83",
+    "selectedColor": "#1890ff",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "src/pages/index/index",
+        "iconPath": "src/static/tabbar/home.png",
+        "selectedIconPath": "src/static/tabbar/home-active.png",
+        "text": "首页"
+      },
+      {
+        "pagePath": "src/pages/map/map",
+        "iconPath": "src/static/tabbar/map.png",
+        "selectedIconPath": "src/static/tabbar/map-active.png",
+        "text": "地图"
+      },
+      {
+        "pagePath": "src/pages/mine/mine",
+        "iconPath": "src/static/tabbar/mine.png",
+        "selectedIconPath": "src/static/tabbar/mine-active.png",
+        "text": "我的"
+      }
+    ]
+  }
+}

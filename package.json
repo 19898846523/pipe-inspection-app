@@ -1,0 +1,22 @@
+{
+  "name": "pipe-network-patrol",
+  "version": "1.0.0",
+  "description": "管网巡检 App - 支持路人及工程师上报管网信息",
+  "scripts": {
+    "dev:mp-weixin": "vite build --mode mp-weixin",
+    "build:mp-weixin": "vite build --mode mp-weixin",
+    "dev:h5": "vite",
+    "build:h5": "vite build"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21",
+    "vue-router": "^5.0.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "sass": "^1.75.0",
+    "vite": "^5.2.11"
+  }
+}
