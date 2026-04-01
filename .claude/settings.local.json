@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && dir src)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && move src\\\\pages.json . && move src\\\\manifest.json . && move src\\\\App.vue . && move src\\\\uni.scss .)",
+      "Bash(cmd /c \"cd /d F:\\\\文件\\\\管网 APP && move src\\\\pages.json . && move src\\\\manifest.json . && move src\\\\App.vue . && move src\\\\uni.scss .\")",
+      "Bash(cmd /c \"cd /d F:\\\\文件\\\\管网 APP && copy src\\\\App.vue . && copy src\\\\uni.scss .\")",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm install)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm cache clean --force && npm install --legacy-peer-deps 2>&1 | tail -30)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm run dev:h5 2>&1 | head -50)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm run dev:h5)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm install --legacy-peer-deps 2>&1 | tail -20)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && rm -rf node_modules package-lock.json && npm install --legacy-peer-deps 2>&1 | tail -30)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm install vue-router --legacy-peer-deps 2>&1 | tail -10)",
+      "Bash(cd \"F:\\\\文件\\\\管网 APP\" && npm install leaflet --legacy-peer-deps 2>&1 | tail -10)"
+    ]
+  }
+}
