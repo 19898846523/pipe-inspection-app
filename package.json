@@ -1,5 +1,6 @@
 {
   "name": "pipe-network-patrol",
+  "type": "module",
   "version": "1.0.0",
   "description": "管网巡检 App - 支持路人及工程师上报管网信息",
   "scripts": {
@@ -9,8 +10,10 @@
     "build:h5": "vite build"
   },
   "dependencies": {
+    "jsencrypt": "^3.5.4",
     "leaflet": "^1.9.4",
     "pinia": "^2.1.7",
+    "vant": "^4.9.24",
     "vue": "^3.4.21",
     "vue-router": "^5.0.3"
   },

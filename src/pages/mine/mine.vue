@@ -121,8 +121,23 @@
         <span class="tab-text">我的</span>
       </div>
     </nav>
+    <div class="custom-modal-overlay" v-if="showLogoutModal">
+      <div class="custom-modal">
+        <div class="modal-header">提示</div>
+        <div class="modal-body">确定要退出登录吗？</div>
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="showLogoutModal = false">取 消</button>
+          <button class="btn-confirm" @click="executeLogout">确 定</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" v-if="toastShow">
+        <span>{{toastMessage}}</span>
+    </div>
+
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -131,6 +146,10 @@ import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const showLogoutModal = ref(false)
+const toastShow = ref(false)
+const toastMessage = ref('')
 
 // 状态
 const stats = ref({
@@ -171,11 +190,30 @@ function goToLogin() {
 }
 
 function handleLogout() {
-  if (confirm('确定要退出登录吗？')) {
-    userStore.logout()
-    stats.value = { uploadCount: 0, viewCount: 0, followUpCount: 0 }
-    alert('已退出登录')
-  }
+  showLogoutModal.value = true
+}
+
+function showToast(message) {
+  toastMessage.value = message
+  toastShow.value = true
+  setTimeout(() => {
+    toastShow.value = false
+  }, 2000)
+}
+
+async function executeLogout() {
+  // 先关闭弹窗
+  showLogoutModal.value = false
+
+  // 执行退出逻辑 (如果你在 userStore.logout 里加了请求后端的逻辑，建议加上 await)
+  await userStore.logout()
+
+  // 清空本页面的统计数据
+  stats.value = { uploadCount: 0, viewCount: 0, followUpCount: 0 }
+
+  // 提示 (可以换成你自己封装的 Toast)
+  showToast('已退出登录')
+  // 若想跳回登录页，可以加上 router.push('/login')
 }
 
 function goToMyUploads() {
@@ -442,5 +480,97 @@ function switchTab(tab) {
       color: #1890ff;
     }
   }
+}
+/* ======= 新增：弹窗的样式 ======= */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.custom-modal {
+  width: 300px;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: scaleUp 0.2s ease-out forwards;
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  padding: 16px 20px 8px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+}
+
+.modal-body {
+  padding: 16px 20px 24px;
+  font-size: 15px;
+  color: #666;
+  text-align: center;
+}
+
+.modal-footer {
+  display: flex;
+  border-top: 1px solid #eee;
+
+  button {
+    flex: 1;
+    height: 48px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:active {
+      background-color: #f5f5f5;
+    }
+  }
+
+  .btn-cancel {
+    color: #666;
+    border-right: 1px solid #eee;
+  }
+
+  .btn-confirm {
+    color: #ff4d4f; /* 既然是退出操作，确定按钮使用红色比较合适 */
+    font-weight: bold;
+  }
+}
+/* ======= 新增：Toast 提示框的样式 ======= */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 10000; /* 层级要比 modal 高，防止被遮挡 */
+  text-align: center;
+  pointer-events: none; /* 防止点击阻挡 */
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

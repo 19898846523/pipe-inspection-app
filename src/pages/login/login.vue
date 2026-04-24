@@ -139,11 +139,12 @@ async function handleLogin() {
     showToast('登录成功')
 
     setTimeout(() => {
-      router.back()
+      router.push('/')
     }, 1500)
   } catch (e) {
     console.error('登录失败:', e)
-    showToast('登录失败，请检查账号密码')
+    const errorMsg = e.message ? e.message : '登录失败，请检查网络或配置'
+    showToast(errorMsg)
   } finally {
     loggingIn.value = false
   }

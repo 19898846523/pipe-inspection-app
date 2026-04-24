@@ -1,6 +1,5 @@
 <template>
   <div class="container">
-    <!-- 图片轮播 -->
     <div class="image-section" v-if="detail.images && detail.images.length > 0">
       <div class="swiper">
         <div class="swiper-wrapper" :style="swiperStyle">
@@ -19,7 +18,6 @@
       </div>
     </div>
 
-    <!-- 状态标签 -->
     <div class="status-section">
       <span class="status-tag" :class="detail.status">
         {{ getStatusText(detail.status) }}
@@ -27,21 +25,66 @@
       <span class="time">{{ formatFullTime(detail.createTime) }}</span>
     </div>
 
-    <!-- 位置信息 -->
+    <section class="info-section">
+      <div class="section-title">
+        <span class="icon">📋</span>
+        <h3 class="title">基本信息</h3>
+      </div>
+      <div class="info-content">
+        <div class="info-row">
+          <span class="label">事件标题：</span>
+          <span class="value font-bold">{{ detail.title || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">所属领域：</span>
+          <span class="value">{{ detail.domainName || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">事件类别：</span>
+          <span class="value">{{ detail.eventTypeName || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">事件等级：</span>
+          <span class="value">
+            <span class="level-tag" :class="'level-' + (detail.eventLevel || 'default')">
+              {{ detail.eventLevelName || '-' }}
+            </span>
+          </span>
+        </div>
+      </div>
+    </section>
+
     <section class="info-section">
       <div class="section-title">
         <span class="icon">📍</span>
-        <h3 class="title">位置信息</h3>
+        <h3 class="title">时空信息</h3>
       </div>
       <div class="info-content">
-        <p class="address">{{ detail.address || '未知位置' }}</p>
-        <div class="coordinates">
-          <span class="label">经度：</span>
-          <span class="value">{{ detail.longitude?.toFixed(6) || '-' }}</span>
+        <div class="info-row">
+          <span class="label">发生时间(起)：</span>
+          <span class="value">{{ detail.occurStart ? formatFullTime(detail.occurStart) : '-' }}</span>
         </div>
-        <div class="coordinates">
-          <span class="label">纬度：</span>
-          <span class="value">{{ detail.latitude?.toFixed(6) || '-' }}</span>
+        <div class="info-row">
+          <span class="label">发生时间(止)：</span>
+          <span class="value">{{ detail.occurEnd ? formatFullTime(detail.occurEnd) : '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">区域代码：</span>
+          <span class="value">{{ detail.areaCode || '-' }}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <p class="address">{{ detail.address || '未知位置' }}</p>
+        <div class="coordinates-box">
+          <div class="coordinates">
+            <span class="label">经度：</span>
+            <span class="value">{{ detail.longitude?.toFixed(6) || '-' }}</span>
+          </div>
+          <div class="coordinates">
+            <span class="label">纬度：</span>
+            <span class="value">{{ detail.latitude?.toFixed(6) || '-' }}</span>
+          </div>
         </div>
         <div class="location-actions">
           <button class="action-btn" @click="openLocation">
@@ -56,7 +99,6 @@
       </div>
     </section>
 
-    <!-- 上报人信息 -->
     <section class="info-section">
       <div class="section-title">
         <span class="icon">👤</span>
@@ -78,18 +120,16 @@
       </div>
     </section>
 
-    <!-- 问题描述 -->
-    <section class="info-section" v-if="detail.description">
+    <section class="info-section" v-if="detail.content">
       <div class="section-title">
         <span class="icon">📝</span>
-        <h3 class="title">问题描述</h3>
+        <h3 class="title">事件详情</h3>
       </div>
       <div class="info-content">
-        <p class="description">{{ detail.description }}</p>
+        <p class="description">{{ detail.content }}</p>
       </div>
     </section>
 
-    <!-- 处理进度 -->
     <section class="info-section" v-if="detail.status !== 'pending'">
       <div class="section-title">
         <span class="icon">🔄</span>
@@ -120,7 +160,6 @@
       </div>
     </section>
 
-    <!-- 底部操作栏 -->
     <div class="action-bar">
       <div class="action-item" @click="toggleFavorite">
         <span class="action-icon">{{ isFavorite ? '❤️' : '🤍' }}</span>
@@ -144,13 +183,23 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import { formatLocation } from '@/utils/location'
+// import { formatLocation } from '@/utils/location' // 如果未使用可移除
 
 const userStore = useUserStore()
 
-// 状态
+// 状态：已根据 upload.vue 的请求参数补全
 const detail = ref({
   id: '',
+  title: '',
+  domain: '',
+  domainName: '',
+  eventType: '',
+  eventTypeName: '',
+  eventLevel: '',
+  eventLevelName: '',
+  areaCode: '',
+  occurStart: null,
+  occurEnd: null,
   longitude: 0,
   latitude: 0,
   address: '',
@@ -160,7 +209,7 @@ const detail = ref({
   uploaderName: '',
   userType: '',
   images: [],
-  description: '',
+  content: '', // 原为 description，现对齐 upload.vue
   status: 'pending'
 })
 const isFavorite = ref(false)
@@ -187,13 +236,23 @@ const swiperStyle = computed(() => ({
 
 // 加载详情
 function loadDetail() {
-  // 从 URL 参数获取 ID
   const params = new URLSearchParams(window.location.hash.split('?')[1])
   const id = params.get('id') || 'mock-1'
 
-  // 模拟数据
+  // 模拟数据：整合了原有的和新增补充的字段
+  // 注：实际开发中，domainName / eventTypeName 等通常由后端直接返回（或者通过字典转译）
   detail.value = {
     id,
+    title: '主干道供水管网破损漏水',
+    domain: 'WATER',
+    domainName: '供水管网',
+    eventType: 'BROKEN',
+    eventTypeName: '设施损坏',
+    eventLevel: 'HIGH',
+    eventLevelName: '重大级',
+    areaCode: '110105',
+    occurStart: '2023-10-24 10:30:00',
+    occurEnd: '', // 如果没有结束时间则为空
     longitude: 116.397428,
     latitude: 39.90923,
     address: '北京市朝阳区 xx 路 xx 号',
@@ -203,7 +262,7 @@ function loadDetail() {
     uploaderName: '工程师 1',
     userType: '工程师',
     images: ['/static/demo1.jpg', '/static/demo2.jpg', '/static/demo3.jpg'],
-    description: '巡检发现该处管网存在破损情况，需要及时修复处理。现场已做好安全警示。',
+    content: '巡检发现该处主干道管网存在严重破损并伴随漏水情况，需要及时安排抢修处理。现场已做好安全警示和隔离。',
     status: 'processing'
   }
 }
@@ -233,14 +292,17 @@ function getStatusText(status) {
 // 格式化时间
 function formatTime(timestamp) {
   if (!timestamp) return '待处理'
-  const date = new Date(timestamp)
+  // 兼容字符串类型的时间（如 occurStart 可能是 "2023-10-24 10:30:00"）
+  const date = typeof timestamp === 'string' ? new Date(timestamp.replace(/-/g, '/')) : new Date(timestamp)
+  if (isNaN(date.getTime())) return timestamp
   return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
 
 function formatFullTime(timestamp) {
   if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN')
+  const date = typeof timestamp === 'string' ? new Date(timestamp.replace(/-/g, '/')) : new Date(timestamp)
+  if (isNaN(date.getTime())) return timestamp
+  return date.toLocaleString('zh-CN', { hour12: false })
 }
 
 // 打开位置
@@ -276,8 +338,8 @@ function toggleFavorite() {
 function handleShare() {
   if (navigator.share) {
     navigator.share({
-      title: '管网巡检',
-      text: detail.value.description,
+      title: detail.value.title || '管网巡检事件',
+      text: detail.value.content,
       url: window.location.href
     })
   } else {
@@ -306,6 +368,7 @@ function handleProcess() {
   padding-bottom: 80px;
 }
 
+/* 轮播图样式保持不变 */
 .image-section {
   .swiper {
     position: relative;
@@ -353,6 +416,7 @@ function handleProcess() {
   }
 }
 
+/* 状态标签 */
 .status-section {
   display: flex;
   justify-content: space-between;
@@ -387,6 +451,7 @@ function handleProcess() {
   }
 }
 
+/* 详情卡片基础容器 */
 .info-section {
   background: white;
   margin-top: 12px;
@@ -396,7 +461,7 @@ function handleProcess() {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 
     .icon {
       font-size: 18px;
@@ -411,6 +476,54 @@ function handleProcess() {
   }
 
   .info-content {
+    /* 新增：键值对排列布局，适用于基本信息和时空信息 */
+    .info-row {
+      display: flex;
+      margin-bottom: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .label {
+        color: #666;
+        width: 90px;
+        flex-shrink: 0;
+      }
+
+      .value {
+        color: #333;
+        flex: 1;
+        word-break: break-all;
+
+        &.font-bold {
+          font-weight: bold;
+          font-size: 15px;
+        }
+
+        /* 等级标签样式 */
+        .level-tag {
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+
+          &.level-HIGH { background: #fff1f0; color: #f5222d; }
+          &.level-MIDDLE { background: #fff7e6; color: #faad14; }
+          &.level-LOW { background: #e6f7ff; color: #1890ff; }
+          &.level-default { background: #f5f5f5; color: #666; }
+        }
+      }
+    }
+
+    /* 区域分割线 */
+    .divider {
+      height: 1px;
+      background: #f0f0f0;
+      margin: 16px 0;
+    }
+
     .address {
       font-size: 15px;
       color: #333;
@@ -418,23 +531,27 @@ function handleProcess() {
       line-height: 1.5;
     }
 
-    .coordinates {
-      font-size: 13px;
-      margin-bottom: 6px;
+    .coordinates-box {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 12px;
 
-      .label {
-        color: #999;
-      }
+      .coordinates {
+        font-size: 13px;
 
-      .value {
-        color: #1890ff;
+        .label {
+          color: #999;
+        }
+
+        .value {
+          color: #1890ff;
+        }
       }
     }
 
     .location-actions {
       display: flex;
       gap: 12px;
-      margin-top: 12px;
 
       .action-btn {
         flex: 1;
@@ -527,10 +644,12 @@ function handleProcess() {
       color: #666;
       line-height: 1.8;
       margin: 0;
+      white-space: pre-wrap;
     }
   }
 }
 
+/* 时间轴 */
 .timeline {
   .timeline-item {
     display: flex;
@@ -586,6 +705,7 @@ function handleProcess() {
   }
 }
 
+/* 底部操作栏 */
 .action-bar {
   position: fixed;
   left: 0;
