@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/Gwgl-Server/:match*",
+      "destination": "http://123.60.186.220:8100/Gwgl-Server/:match*"
+    }
+  ]
+}
