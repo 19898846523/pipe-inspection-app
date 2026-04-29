@@ -3,10 +3,12 @@
  */
 
 // 动态获取 BASE_URL
-const isDev = import.meta.env.DEV
+/*const isDev = import.meta.env.DEV
 const BASE_URL = isDev
   ? '/Gwgl-Server'
   : '/api/Gwgl-Server'
+ */
+ const BASE_URL = '/Gwgl-Server'
 /**
  * 请求封装
  * @param {Object} options - 请求配置
