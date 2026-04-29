@@ -19,8 +19,8 @@ export default defineConfig({
         display: 'standalone', // 关键：让网页以独立 App 模式运行，隐藏浏览器地址栏
         icons: [
           {
-            src: '/icon-256.png',
-            sizes: '256x256',
+            src: '/icon-192.png',
+            sizes: '192x192',
             type: 'image/png'
           },
           {
