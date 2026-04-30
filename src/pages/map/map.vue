@@ -1,10 +1,8 @@
 <template>
   <div class="container">
-    <!-- 地图容器 -->
     <div class="map-wrapper">
-      <div ref="mapContainer" id="map" class="map-container"></div>
+      <div id="map-container" class="map-container"></div>
 
-      <!-- 地图控制按钮 -->
       <div class="map-controls">
         <button class="control-btn" @click="relocate" title="定位">
           <span class="control-icon">📍</span>
@@ -15,7 +13,6 @@
       </div>
     </div>
 
-    <!-- 底部列表 -->
     <div class="bottom-sheet" :class="{ expanded: sheetExpanded }">
       <div class="sheet-handle" @click="toggleSheet">
         <div class="handle-bar"></div>
@@ -48,7 +45,6 @@
       </div>
     </div>
 
-    <!-- 底部导航 -->
     <nav class="tabbar">
       <div class="tab-item" :class="{ active: activeTab === 'index' }" @click="switchTab('index')">
         <span class="tab-icon">🏠</span>
@@ -64,55 +60,48 @@
       </div>
     </nav>
 
-    <!-- 点位详情弹窗 -->
-    <div class="detail-modal" v-if="selectedItem" @click="closeDetail">
-      <div class="modal-content" @click.stop>
+    <div class="detail-modal" v-if="selectedItem" @click.self="closeDetail">
+      <div class="modal-content">
         <div class="modal-handle" @click="closeDetail">
           <div class="handle-bar"></div>
         </div>
+
         <div class="modal-body">
-          <div class="detail-images" v-if="selectedItem.images?.length > 0">
+          <div class="detail-images" v-if="selectedItem.images && selectedItem.images.length > 0">
             <div class="image-scroll">
               <div class="image-list">
                 <img
-                  v-for="(img, i) in selectedItem.images"
-                  :key="i"
-                  class="detail-image"
+                  v-for="(img, idx) in selectedItem.images"
+                  :key="idx"
                   :src="img"
-                  alt=""
+                  class="detail-image"
                 />
               </div>
             </div>
           </div>
+
           <div class="detail-info">
             <div class="detail-row">
-              <span class="info-label">位置：</span>
-              <span class="info-value">{{ selectedItem.address || '未知' }}</span>
+              <span class="info-label">地址：</span>
+              <span class="info-value">{{ selectedItem.address }}</span>
             </div>
             <div class="detail-row">
-              <span class="info-label">坐标：</span>
-              <span class="info-value">{{ formatLocation(selectedItem.longitude, selectedItem.latitude) }}</span>
+              <span class="info-label">描述：</span>
+              <span class="info-value">{{ selectedItem.description || '暂无描述' }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="info-label">上报人：</span>
+              <span class="info-value">{{ selectedItem.uploaderName }} ({{ selectedItem.userType }})</span>
             </div>
             <div class="detail-row">
               <span class="info-label">时间：</span>
               <span class="info-value">{{ formatFullTime(selectedItem.createTime) }}</span>
             </div>
-            <div class="detail-row">
-              <span class="info-label">上报人：</span>
-              <span class="info-value">{{ selectedItem.uploaderName || '匿名' }}（{{ selectedItem.userType || '路人' }}）</span>
-            </div>
-            <div class="detail-row" v-if="selectedItem.description">
-              <span class="info-label">描述：</span>
-              <span class="info-value">{{ selectedItem.description }}</span>
-            </div>
           </div>
+
           <div class="detail-actions">
-            <button class="action-btn primary" @click="navigateTo(selectedItem)">
-              导航到这里
-            </button>
-            <button class="action-btn secondary" @click="callUploader">
-              联系上报人
-            </button>
+            <button class="action-btn secondary" @click="callUploader">联系上报人</button>
+            <button class="action-btn primary" @click="navigateTo(selectedItem)">导航前往</button>
           </div>
         </div>
       </div>
@@ -121,106 +110,100 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { getCurrentLocation, formatLocation } from '@/utils/location'
+import AMapLoader from '@amap/amap-jsapi-loader'
+import { formatLocation } from '@/utils/location'
 
 const router = useRouter()
 
 // 状态
-const mapContainer = ref(null)
+// AMap 实例建议使用 shallowRef，避免 Vue 对其进行深度响应式追踪，提高性能
+const map = shallowRef(null)
+const AMapInstance = shallowRef(null) // 存储 AMap 类
+
 const satelliteMode = ref(false)
 const sheetExpanded = ref(false)
 const nearbyList = ref([])
 const selectedItem = ref(null)
 
-// 地图实例
-let map = null
 let markers = []
-let userMarker = null
+let satelliteLayer = null
 
-// 图层
-const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
-})
-
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-  attribution: '© ESRI'
-})
-
-// 当前 Tab
-const activeTab = computed(() => {
-  const hash = window.location.hash
-  if (hash.includes('index')) return 'index'
-  if (hash.includes('mine')) return 'mine'
-  return 'map'
-})
+// 配置高德地图 Key (正式环境建议放在环境变量中)
+const AMAP_CONFIG = {
+  key: 'd7d972290ff37bd9d1fd229b483bb228', // 需替换
+  securityCode: '5be9f77f2ef880de042d0503c84b1a94', // 需替换
+  version: '2.0'
+}
 
 onMounted(() => {
+  window._AMapSecurityConfig = { securityJsCode: AMAP_CONFIG.securityCode }
   initMap()
-  loadMarkers()
 })
 
 onUnmounted(() => {
-  if (map) {
-    map.remove()
-    map = null
+  if (map.value) {
+    map.value.destroy()
   }
 })
 
 // 初始化地图
-function initMap() {
-  if (!mapContainer.value) return
+async function initMap() {
+  try {
+    const AMap = await AMapLoader.load({
+      key: AMAP_CONFIG.key,
+      version: AMAP_CONFIG.version,
+      plugins: ['AMap.Geolocation', 'AMap.Scale', 'AMap.ToolBar']
+    })
 
-  // 创建地图
-  map = L.map('map', {
-    center: [39.908823, 116.397476], // 北京
-    zoom: 13,
-    layers: [streetLayer]
-  })
+    AMapInstance.value = AMap
 
-  // 添加缩放控制
-  L.control.zoom({
-    position: 'topright'
-  }).addTo(map)
+    map.value = new AMap.Map('map-container', {
+      viewMode: '3D', // 开启 3D 视图
+      zoom: 13,
+      center: [116.397476, 39.908823] // 注意：高德经纬度顺序是 [lng, lat]
+    })
 
-  // 地图加载完成后定位
-  setTimeout(() => {
+    // 添加控件
+    map.value.addControl(new AMap.Scale())
+    map.value.addControl(new AMap.ToolBar({ position: 'RT' }))
+
+    // 加载数据
+    loadMarkers()
+
+    // 自动定位
     locateUser()
-  }, 500)
+  } catch (e) {
+    console.error('地图加载失败:', e)
+  }
 }
 
-// 定位用户
-async function locateUser() {
-  try {
-    const loc = await getCurrentLocation()
-    const latlng = [loc.latitude, loc.longitude]
+// 定位用户 (使用高德官方定位插件，精度更高且已处理坐标偏移)
+function locateUser() {
+  const AMap = AMapInstance.value
+  const geolocation = new AMap.Geolocation({
+    enableHighAccuracy: true, // 是否使用高精度定位
+    timeout: 10000,           // 超过10秒后停止定位
+    position: 'RB',           // 定位按钮的停靠位置
+    offset: [10, 20],         // 定位按钮与设置的停靠位置的偏移量
+    zoomToAccuracy: true,     // 定位成功后是否自动调整地图视野到定位点
+  })
 
-    // 移动地图到用户位置
-    map.setView(latlng, 16)
-
-    // 添加用户位置标记
-    if (userMarker) {
-      map.removeLayer(userMarker)
+  map.value.addControl(geolocation)
+  geolocation.getCurrentPosition((status, result) => {
+    if (status === 'complete') {
+      console.log('定位成功', result)
+    } else {
+      console.error('定位失败', result)
     }
-
-    userMarker = L.marker(latlng).addTo(map)
-      .bindPopup('<b>你的位置</b>')
-      .openPopup()
-
-    // 添加精度圆圈
-    L.circle(latlng, { radius: 50, color: '#1890ff', fillColor: '#1890ff', fillOpacity: 0.2 })
-      .addTo(map)
-  } catch (e) {
-    console.error('定位失败:', e)
-  }
+  })
 }
 
 // 加载标记点
 function loadMarkers() {
-  // 模拟数据
+  const AMap = AMapInstance.value
+  // 模拟数据 (注意高德使用的是 GCJ-02 坐标)
   const mockData = [
     {
       id: '1',
@@ -232,43 +215,22 @@ function loadMarkers() {
       userType: '工程师',
       images: ['/static/demo1.jpg'],
       description: '管网破损'
-    },
-    {
-      id: '2',
-      latitude: 39.918823,
-      longitude: 116.407476,
-      address: '北京市朝阳区 xx 街 2 号',
-      createTime: Date.now() - 7200000,
-      uploaderName: '路人 1',
-      userType: '路人',
-      images: [],
-      description: ''
-    },
-    {
-      id: '3',
-      latitude: 39.898823,
-      longitude: 116.387476,
-      address: '北京市东城区 xx 道 3 号',
-      createTime: Date.now() - 86400000,
-      uploaderName: '工程师 2',
-      userType: '工程师',
-      images: ['/static/demo2.jpg', '/static/demo3.jpg'],
-      description: '发现漏水情况'
     }
+    // ... 其他 mock 数据 ...
   ]
 
   nearbyList.value = mockData
 
-  // 添加标记到地图
+  // 清除旧标记
+  map.value.remove(markers)
+  markers = []
+
   mockData.forEach(item => {
-    const marker = L.marker([item.latitude, item.longitude]).addTo(map)
-      .bindPopup(`
-        <div style="min-width: 200px;">
-          <b>${item.address || '未知位置'}</b><br/>
-          <span style="color: #666;">${item.uploaderName} (${item.userType})</span><br/>
-          <span style="color: #999; font-size: 12px;">${formatTime(item.createTime)}</span>
-        </div>
-      `)
+    const marker = new AMap.Marker({
+      position: [item.longitude, item.latitude],
+      title: item.address,
+      map: map.value
+    })
 
     marker.on('click', () => {
       selectItem(item)
@@ -277,27 +239,31 @@ function loadMarkers() {
     markers.push(marker)
   })
 
-  // 调整地图边界以显示所有标记
+  // 自动缩放以展示所有标记
   if (markers.length > 0) {
-    const group = L.featureGroup(markers)
-    map.fitBounds(group.getBounds(), { padding: [50, 50] })
+    map.value.setFitView(markers)
   }
 }
 
 // 重新定位
 async function relocate() {
-  await locateUser()
+  locateUser()
 }
 
 // 切换图层
 function toggleLayer() {
+  const AMap = AMapInstance.value
   satelliteMode.value = !satelliteMode.value
+
   if (satelliteMode.value) {
-    map.removeLayer(streetLayer)
-    map.addLayer(satelliteLayer)
+    if (!satelliteLayer) {
+      satelliteLayer = new AMap.TileLayer.Satellite()
+    }
+    map.value.add(satelliteLayer)
   } else {
-    map.removeLayer(satelliteLayer)
-    map.addLayer(streetLayer)
+    if (satelliteLayer) {
+      map.value.remove(satelliteLayer)
+    }
   }
 }
 
@@ -309,10 +275,8 @@ function toggleSheet() {
 // 选择项目
 function selectItem(item) {
   selectedItem.value = item
-
-  // 移动地图到该位置
-  if (map) {
-    map.setView([item.latitude, item.longitude], 18)
+  if (map.value) {
+    map.value.setZoomAndCenter(18, [item.longitude, item.latitude])
   }
 }
 
@@ -359,6 +323,7 @@ function switchTab(tab) {
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
+  overflow: hidden;
 }
 
 .map-wrapper {
@@ -376,7 +341,7 @@ function switchTab(tab) {
 .map-controls {
   position: absolute;
   right: 10px;
-  bottom: 100px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -409,6 +374,7 @@ function switchTab(tab) {
   transition: max-height 0.3s ease;
   overflow: hidden;
   z-index: 1001;
+  flex-shrink: 0;
 
   &.expanded {
     max-height: 60vh;
@@ -622,14 +588,12 @@ function switchTab(tab) {
 }
 
 .tabbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
   display: flex;
   background: white;
   border-top: 1px solid #e8e8e8;
   padding-bottom: env(safe-area-inset-bottom);
+  flex-shrink: 0;
+  z-index: 1000;
 
   .tab-item {
     flex: 1;
@@ -655,17 +619,14 @@ function switchTab(tab) {
   }
 }
 
-// Leaflet 样式修复
-:deep(.leaflet-container) {
-  font-family: inherit;
+/* 隐藏高德默认的定位按钮（如果你想用自己 UI 里的定位按钮） */
+:deep(.amap-geolocation-con) {
+  display: none !important;
 }
 
-:deep(.leaflet-popup-content-wrapper) {
-  border-radius: 8px;
-}
-
-:deep(.leaflet-popup-content) {
-  margin: 12px;
-  line-height: 1.5;
+/* 隐藏高德地图的 Logo 和版权信息（可选，如果影响底部 UI） */
+:deep(.amap-logo),
+:deep(.amap-copyright) {
+  display: none !important;
 }
 </style>
