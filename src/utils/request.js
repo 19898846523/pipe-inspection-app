@@ -32,7 +32,7 @@ export function request(options = {}) {
     try {
       const token = JSON.parse(userInfo).token
       if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`
+        config.headers['Authorization'] = token
       }
     } catch (e) {
       console.error('解析 userInfo 失败', e)

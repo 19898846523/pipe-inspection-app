@@ -7,91 +7,91 @@
       </div>
 
       <div class="form-group">
-    <van-field
-      v-model="formData.title"
-      label="事件标题"
-      placeholder="请输入事件标题"
-      required
-      input-align="right"
-    />
+        <van-field
+          v-model="formData.title"
+          label="事件标题"
+          placeholder="请输入事件标题"
+          required
+          input-align="right"
+        />
 
-    <van-field
-      v-model="fieldDisplay.domain"
-      is-link
-      readonly
-      label="所属领域"
-      placeholder="请选择领域"
-      required
-      input-align="right"
-      @click="showPicker.domain = true"
-    />
+        <van-field
+          v-model="fieldDisplay.domain"
+          is-link
+          readonly
+          label="所属领域"
+          placeholder="请选择领域"
+          required
+          input-align="right"
+          @click="showPicker.domain = true"
+        />
 
-    <van-field
-      v-model="fieldDisplay.eventType"
-      is-link
-      readonly
-      label="事件类别"
-      placeholder="请选择事件类别"
-      required
-      input-align="right"
-      @click="showPicker.eventType = true"
-    />
+        <van-field
+          v-model="fieldDisplay.eventType"
+          is-link
+          readonly
+          label="事件类别"
+          placeholder="请选择事件类别"
+          required
+          input-align="right"
+          @click="showPicker.eventType = true"
+        />
 
-    <van-field
-      v-model="fieldDisplay.eventLevel"
-      is-link
-      readonly
-      label="事件等级"
-      placeholder="请选择事件等级"
-      required
-      input-align="right"
-      @click="showPicker.eventLevel = true"
-    />
+        <van-field
+          v-model="fieldDisplay.eventLevel"
+          is-link
+          readonly
+          label="事件等级"
+          placeholder="请选择事件等级"
+          required
+          input-align="right"
+          @click="showPicker.eventLevel = true"
+        />
 
-    <van-field
-      v-model="fieldDisplay.eventFlag"
-      is-link
-      readonly
-      label="事件状态"
-      placeholder="请选择事件状态"
-      required
-      input-align="right"
-      @click="showPicker.eventFlag = true"
-    />
-  </div>
-</section>
+        <van-field
+          v-model="fieldDisplay.eventFlag"
+          is-link
+          readonly
+          label="事件状态"
+          placeholder="请选择事件状态"
+          required
+          input-align="right"
+          @click="showPicker.eventFlag = true"
+        />
+      </div>
+    </section>
 
-<van-popup v-model:show="showPicker.domain" position="bottom">
-  <van-picker
-    :columns="dictColumns.domain"
-    @confirm="onConfirmDomain"
-    @cancel="showPicker.domain = false"
-  />
-</van-popup>
+    <van-popup v-model:show="showPicker.domain" position="bottom">
+      <van-picker
+        :columns="dictColumns.domain"
+        @confirm="onConfirmDomain"
+        @cancel="showPicker.domain = false"
+      />
+    </van-popup>
 
-<van-popup v-model:show="showPicker.eventType" position="bottom">
-  <van-picker
-    :columns="dictColumns.eventType"
-    @confirm="onConfirmEventType"
-    @cancel="showPicker.eventType = false"
-  />
-</van-popup>
+    <van-popup v-model:show="showPicker.eventType" position="bottom">
+      <van-picker
+        :columns="dictColumns.eventType"
+        @confirm="onConfirmEventType"
+        @cancel="showPicker.eventType = false"
+      />
+    </van-popup>
 
-<van-popup v-model:show="showPicker.eventLevel" position="bottom">
-  <van-picker
-    :columns="dictColumns.eventLevel"
-    @confirm="onConfirmEventLevel"
-    @cancel="showPicker.eventLevel = false"
-  />
-</van-popup>
+    <van-popup v-model:show="showPicker.eventLevel" position="bottom">
+      <van-picker
+        :columns="dictColumns.eventLevel"
+        @confirm="onConfirmEventLevel"
+        @cancel="showPicker.eventLevel = false"
+      />
+    </van-popup>
 
-<van-popup v-model:show="showPicker.eventFlag" position="bottom">
-  <van-picker
-    :columns="dictColumns.eventFlag"
-    @confirm="onConfirmEventFlag"
-    @cancel="showPicker.eventFlag = false"
-  />
-</van-popup>
+    <van-popup v-model:show="showPicker.eventFlag" position="bottom">
+      <van-picker
+        :columns="dictColumns.eventFlag"
+        @confirm="onConfirmEventFlag"
+        @cancel="showPicker.eventFlag = false"
+      />
+    </van-popup>
 
     <section class="section">
       <div class="section-header">
@@ -110,9 +110,14 @@
           <input type="datetime-local" class="input-control" v-model="formData.occurEnd" />
         </div>
 
-        <div class="form-item">
-          <span class="label">区域代码</span>
-          <input class="input-control" v-model="formData.areaCode" placeholder="请输入区域代码" />
+        <div class="form-item" @click="showPicker.area = true">
+          <span class="label">事件区域</span>
+          <input
+            class="input-control"
+            v-model="fieldDisplay.area"
+            placeholder="请选择事件区域"
+            readonly
+          />
         </div>
       </div>
 
@@ -129,6 +134,18 @@
         <span class="arrow">›</span>
       </div>
     </section>
+
+    <van-popup v-model:show="showPicker.area" position="bottom">
+      <van-cascader
+        v-model="formData.areaCode"
+        title="请选择事件区域"
+        :options="areaTreeOptions"
+        :field-names="{ text: 'label', value: 'value', children: 'children' }"
+        @close="showPicker.area = false"
+        @finish="onFinishArea"
+        @change="onChangeArea"
+      />
+    </van-popup>
 
     <section class="section">
       <div class="section-header">
@@ -171,20 +188,19 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { post } from '@/utils/request' // 引入您封装的请求方法
+import { post, get } from '@/utils/request' // 【修改】补充引入 get 方法
 import { getCurrentLocation } from '@/utils/location'
 
 const router = useRouter()
 
-// 1. 定义完全匹配 /opt-event/save 接口的数据结构
 const formData = ref({
   title: '',
   content: '',
   domain: '',
   eventType: '',
-  eventFlag: '', // API截图里没有这个字段，但根据您的需求添加了此状态下拉
+  eventFlag: '',
   eventLevel: '',
-  areaCode: '',
+  areaCode: '', // 存储最详尽区域的 value
   address: '',
   latitude: 0,
   longitude: 0,
@@ -192,42 +208,44 @@ const formData = ref({
   occurEnd: ''
 })
 
-// UI 状态
 const images = ref([])
 const submitting = ref(false)
 const toastShow = ref(false)
 const toastMessage = ref('')
 
-// 1. 用于显示的文本（Field 显示的是文字，formData 存的是 ID）
 const fieldDisplay = ref({
   domain: '',
   eventType: '',
   eventLevel: '',
-  eventFlag: ''
+  eventFlag: '',
+  area: '' // 【新增】用于显示拼接后的区域文本，如：湖北省/恩施...
 })
 
-// 2. 控制弹窗显示
 const showPicker = ref({
   domain: false,
   eventType: false,
   eventLevel: false,
-  eventFlag: false
+  eventFlag: false,
+  area: false // 【新增】控制区域选择弹窗
 })
 
-// 3. 格式化后的字典数据（Vant Picker 要求格式为 [{ text: '', value: '' }]）
 const dictColumns = ref({
   domain: [],
   eventType: [],
   eventLevel: [],
   eventFlag: []
 })
-// 页面加载时执行
+
+// 【新增】区域树数据
+const areaTreeOptions = ref([])
+
 onMounted(() => {
   loadAllDicts()
   setDefaultTime()
+  loadAreaTree() // 【新增】加载区域树数据
 })
 
-// --- 核心逻辑：获取字典数据 ---
+// --- 核心逻辑：获取字典与区域数据 ---
 async function fetchDict(dictCode) {
   try {
     const res = await post('/sys-dict/listDictItem', { dictCode })
@@ -242,33 +260,48 @@ async function fetchDict(dictCode) {
 }
 
 async function loadAllDicts() {
-  // 并发请求三个字典接口
-  const [domainRes, eventTypeRes,eventLevelRes, eventFlagRes] = await Promise.all([
+  const [domainRes, eventTypeRes, eventLevelRes, eventFlagRes] = await Promise.all([
     fetchDict('DOMAIN'),
     fetchDict('EVENT_TYPE'),
     fetchDict('EVENT_LEVEL'),
     fetchDict('EVENT_FLAG')
   ])
 
-  // 转换数据格式以匹配 Vant Picker
-  dictColumns.value.domain = domainRes.map(item => ({
-    text: item.itemText,
-    value: item.itemValue
-  }))
-  dictColumns.value.eventType = eventTypeRes.map(item => ({
-    text: item.itemText,
-    value: item.itemValue
-  }))
-  dictColumns.value.eventLevel = eventLevelRes.map(item => ({
-    text: item.itemText,
-    value: item.itemValue
-  }))
-  dictColumns.value.eventFlag = eventFlagRes.map(item => ({
-    text: item.itemText,
-    value: item.itemValue
-  }))
+  dictColumns.value.domain = domainRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+  dictColumns.value.eventType = eventTypeRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+  dictColumns.value.eventLevel = eventLevelRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+  dictColumns.value.eventFlag = eventFlagRes.map(item => ({ text: item.itemText, value: item.itemValue }))
 }
-// 4. 选择确认回调
+
+// 递归清理函数：消除空的 children 数组
+function cleanChildren(data) {
+  if (!data || data.length === 0) return
+  data.forEach(item => {
+    // 如果 children 是空数组，则直接删除该属性，标记为最末端
+    if (item.children && item.children.length === 0) {
+      delete item.children
+    } else if (item.children && item.children.length > 0) {
+      // 如果还有子项，继续递归
+      cleanChildren(item.children)
+    }
+  })
+}
+// 【新增】获取区域树数据
+async function loadAreaTree() {
+  try {
+    const res = await get('/sys-area/getMyTree')
+    if (res.status === 200 && res.data) {
+      const treeData = res.data
+      // 在赋值前进行清理
+      cleanChildren(treeData)
+      areaTreeOptions.value = treeData
+    }
+  } catch (error) {
+    console.error('获取区域结构失败', error)
+  }
+}
+
+// 选择确认回调
 const onConfirmDomain = ({ selectedOptions }) => {
   formData.value.domain = selectedOptions[0].value
   fieldDisplay.value.domain = selectedOptions[0].text
@@ -280,6 +313,7 @@ const onConfirmEventType = ({ selectedOptions }) => {
   fieldDisplay.value.eventType = selectedOptions[0].text
   showPicker.value.eventType = false
 }
+
 const onConfirmEventLevel = ({ selectedOptions }) => {
   formData.value.eventLevel = selectedOptions[0].value
   fieldDisplay.value.eventLevel = selectedOptions[0].text
@@ -291,6 +325,24 @@ const onConfirmEventFlag = ({ selectedOptions }) => {
   fieldDisplay.value.eventFlag = selectedOptions[0].text
   showPicker.value.eventFlag = false
 }
+
+// 当用户每选一级时就触发（预防用户选完不点确定或直接点击空白处）
+const onChangeArea = ({ selectedOptions }) => {
+  if (selectedOptions.length > 0) {
+    // 实时更新显示文本
+    fieldDisplay.value.area = selectedOptions.map(option => option.label).join('/')
+    // 实时保存当前的 code
+    formData.value.areaCode = selectedOptions[selectedOptions.length - 1].value
+  }
+}
+// 【新增】区域级联选择完成回调
+const onFinishArea = ({ selectedOptions }) => {
+  showPicker.value.area = false
+  // 确保最终值和文本被正确记录
+  fieldDisplay.value.area = selectedOptions.map(option => option.label).join('/')
+  formData.value.areaCode = selectedOptions[selectedOptions.length - 1].value
+}
+
 // --- 辅助方法 ---
 function showToast(message) {
   toastMessage.value = message
@@ -299,7 +351,6 @@ function showToast(message) {
 }
 
 function setDefaultTime() {
-  // 设置默认发生时间为当前时间 (格式化为 input datetime-local 需要的 YYYY-MM-DDThh:mm)
   const now = new Date()
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
   formData.value.occurStart = now.toISOString().slice(0, 16)
@@ -310,31 +361,27 @@ async function getLocation() {
     const loc = await getCurrentLocation()
     formData.value.latitude = loc.latitude
     formData.value.longitude = loc.longitude
-    //formData.value.address = loc.address
   } catch (e) {
     showToast('定位失败，请检查权限')
   }
 }
 
-// 图片逻辑 (保持不变)
-function chooseImage() { /* ... 同原有代码 ... */ }
-function previewImage(index) { /* ... 同原有代码 ... */ }
+function chooseImage() { /* ... */ }
+function previewImage(index) { /* ... */ }
 function deleteImage(index) {
   if (confirm('确定删除吗？')) images.value.splice(index, 1)
 }
 
-// --- 提交表单 ---
 async function handleSubmit() {
-  // 简单校验
   if (!formData.value.title) return showToast('请输入事件标题')
   if (!formData.value.domain) return showToast('请选择领域')
   if (!formData.value.eventType) return showToast('请选择事件类别')
+  if (!formData.value.areaCode) return showToast('请选择事件区域') // 【修改】增加校验
   if (!formData.value.latitude) return showToast('请获取位置信息')
 
   submitting.value = true
 
   try {
-    // 处理时间格式，将 "YYYY-MM-DDThh:mm" 转换为后端需要的 "YYYY-MM-DD hh:mm:00"
     const payload = { ...formData.value }
     if (payload.occurStart) {
       payload.occurStart = payload.occurStart.replace('T', ' ') + ':00'
@@ -344,8 +391,8 @@ async function handleSubmit() {
     } else {
       payload.occurEnd = null
     }
-     delete payload.eventFlag
-    // 发起真正的保存请求
+    delete payload.eventFlag
+
     const res = await post('/opt-event/save', payload)
 
     if (res.status === 200) {
@@ -366,7 +413,7 @@ async function handleSubmit() {
 </script>
 
 <style lang="scss" scoped>
-/* 基础容器 */
+/* 保持原有样式不变 */
 .container {
   min-height: 100vh;
   background: #f4f6f8;
@@ -389,7 +436,6 @@ async function handleSubmit() {
   .icon { margin-right: 6px; }
 }
 
-/* 表单项样式 */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -416,19 +462,13 @@ async function handleSubmit() {
     outline: none;
     font-size: 14px;
     background: transparent;
-    text-align: right; /* 让输入内容靠右，更符合移动端习惯 */
+    text-align: right;
     color: #333;
 
     &::placeholder { color: #999; }
   }
-
-  .select-control {
-    appearance: none;
-    direction: rtl; /* 下拉框文字靠右 */
-  }
 }
 
-/* 位置卡片 */
 .location-card {
   margin-top: 12px;
   background: #f5f7fa;
@@ -444,7 +484,6 @@ async function handleSubmit() {
   .arrow { color: #ccc; font-size: 20px; }
 }
 
-/* 多行文本与图片 */
 .textarea {
   width: 100%;
   height: 100px;
@@ -479,7 +518,6 @@ async function handleSubmit() {
   .upload-text { font-size: 12px; }
 }
 
-/* 底部提交 */
 .submit-section {
   position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; padding: 10px 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10;
 }
@@ -488,7 +526,6 @@ async function handleSubmit() {
   &.disabled { opacity: 0.6; pointer-events: none; }
 }
 
-/* Toast */
 .toast {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #fff; padding: 10px 20px; border-radius: 6px; z-index: 999;
 }
