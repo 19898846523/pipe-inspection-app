@@ -260,17 +260,20 @@ async function fetchDict(dictCode) {
 }
 
 async function loadAllDicts() {
-  const [domainRes, eventTypeRes, eventLevelRes, eventFlagRes] = await Promise.all([
-    fetchDict('DOMAIN'),
-    fetchDict('EVENT_TYPE'),
-    fetchDict('EVENT_LEVEL'),
-    fetchDict('EVENT_FLAG')
-  ])
+  try {
+    // 改为 await 逐个请求，上一个请求完成后再发下一个
+    const domainRes = await fetchDict('DOMAIN')
+    const eventTypeRes = await fetchDict('EVENT_TYPE')
+    const eventLevelRes = await fetchDict('EVENT_LEVEL')
+    const eventFlagRes = await fetchDict('EVENT_FLAG')
 
-  dictColumns.value.domain = domainRes.map(item => ({ text: item.itemText, value: item.itemValue }))
-  dictColumns.value.eventType = eventTypeRes.map(item => ({ text: item.itemText, value: item.itemValue }))
-  dictColumns.value.eventLevel = eventLevelRes.map(item => ({ text: item.itemText, value: item.itemValue }))
-  dictColumns.value.eventFlag = eventFlagRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+    dictColumns.value.domain = domainRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+    dictColumns.value.eventType = eventTypeRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+    dictColumns.value.eventLevel = eventLevelRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+    dictColumns.value.eventFlag = eventFlagRes.map(item => ({ text: item.itemText, value: item.itemValue }))
+  } catch (error) {
+    console.error('加载字典失败:', error)
+  }
 }
 
 // 递归清理函数：消除空的 children 数组
