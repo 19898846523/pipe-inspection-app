@@ -234,37 +234,60 @@ const swiperStyle = computed(() => ({
   transform: `translateX(-${currentSlide.value * 100}%)`
 }))
 
-// 加载详情
+// 修改 detail.vue 中的 loadDetail 方法
 function loadDetail() {
   const params = new URLSearchParams(window.location.hash.split('?')[1])
-  const id = params.get('id') || 'mock-1'
+  const id = params.get('id')
 
-  // 模拟数据：整合了原有的和新增补充的字段
-  // 注：实际开发中，domainName / eventTypeName 等通常由后端直接返回（或者通过字典转译）
-  detail.value = {
-    id,
-    title: '主干道供水管网破损漏水',
-    domain: 'WATER',
-    domainName: '供水管网',
-    eventType: 'BROKEN',
-    eventTypeName: '设施损坏',
-    eventLevel: 'HIGH',
-    eventLevelName: '重大级',
-    areaCode: '110105',
-    occurStart: '2023-10-24 10:30:00',
-    occurEnd: '', // 如果没有结束时间则为空
-    longitude: 116.397428,
-    latitude: 39.90923,
-    address: '北京市朝阳区 xx 路 xx 号',
-    createTime: Date.now() - 3600000,
-    processTime: Date.now() - 1800000,
-    completeTime: null,
-    uploaderName: '工程师 1',
-    userType: '工程师',
-    images: ['/static/demo1.jpg', '/static/demo2.jpg', '/static/demo3.jpg'],
-    content: '巡检发现该处主干道管网存在严重破损并伴随漏水情况，需要及时安排抢修处理。现场已做好安全警示和隔离。',
-    status: 'processing'
+  // 尝试从缓存中获取刚才在列表页点击的上报详情
+  const cachedDataStr = sessionStorage.getItem('currentEventDetail')
+
+  if (cachedDataStr) {
+    try {
+      const item = JSON.parse(cachedDataStr)
+      // 校验一下 ID 是否匹配，防止读取到过期的脏数据
+      if (String(item.id) === String(id)) {
+
+        // 推导状态 (假设 flag: "0"是待处理, "1"是处理中, "2"是已完成)
+        let currentStatus = 'pending'
+        if (item.flag === '1') currentStatus = 'processing'
+        if (item.flag === '2') currentStatus = 'completed'
+
+        // 提取并映射真实的接口字段
+        detail.value = {
+          id: item.id,
+          title: item.title,
+          domain: item.domain,
+          domainName: item.domain_label || '-',
+          eventType: item.eventType,
+          eventTypeName: item.eventType_label || '-',
+          eventLevel: item.eventLevel,
+          eventLevelName: item.eventLevel_label || '-',
+          areaCode: item.areaCode,
+          occurStart: item.occurStart,
+          occurEnd: item.occurEnd,
+          longitude: item.longitude,
+          latitude: item.latitude,
+          // 如果 address 为空，则使用拼接好的 areaNames_label
+          address: item.address || item.areaNames_label || '未知位置',
+          createTime: item.reportTime, // 接口里的 reportTime 作为上报时间
+          processTime: null,
+          completeTime: null,
+          uploaderName: item.userName || '未知用户',
+          userType: '路人', // 接口中暂无该字段，可根据 userId 或其他逻辑判断
+          images: [], // 列表接口未返回图片，设为空数组
+          content: item.content || '暂无详细描述',
+          status: currentStatus
+        }
+        return // 成功加载后直接返回
+      }
+    } catch (error) {
+      console.error('解析详情数据失败', error)
+    }
   }
+
+  // 如果没有拿到数据（例如用户直接刷新了详情页），由于目前没有专门的详情API，给个提示
+  alert('未能获取到事件详情数据，请返回列表重新点击')
 }
 
 // 预览图片

@@ -40,6 +40,15 @@ const routes = [
     name: 'detail',
     component: () => import('@/pages/detail/detail.vue'),
     meta: { title: '详情' }
+  },
+  {
+    path: '/my-uploads',
+    name: 'my-uploads',
+    // ⚠️ 重点注意：这里的路径必须和您实际存放 my_upload.vue 的位置一致！
+    // 如果您像其他页面一样建了文件夹，可能是 '@/pages/my_upload/my_upload.vue'
+    // 如果您直接放在了 pages 目录下，就是 '@/pages/my_upload.vue'
+    component: () => import('@/pages/my_upload/my_upload.vue'),
+    meta: { title: '我的上报' }
   }
 ]
 

@@ -1,13 +1,11 @@
 <template>
   <div class="container">
-    <!-- Logo 区域 -->
     <div class="logo-section">
       <div class="logo-icon">🔧</div>
       <h1 class="logo-title">工程师登录</h1>
       <p class="logo-subtitle">登录后享受更多权限</p>
     </div>
 
-    <!-- 登录表单 -->
     <div class="form-section">
       <div class="form-item">
         <div class="input-wrapper">
@@ -51,28 +49,8 @@
       >
         {{ loggingIn ? '登录中...' : '登 录' }}
       </button>
-
-      <!-- 其他登录方式 -->
-      <div class="other-methods">
-        <div class="divider">
-          <div class="divider-line"></div>
-          <span class="divider-text">其他登录方式</span>
-          <div class="divider-line"></div>
-        </div>
-        <div class="methods">
-          <div class="method-item" @click="handlePhoneLogin">
-            <span class="method-icon">📱</span>
-            <span class="method-text">手机号登录</span>
-          </div>
-          <div class="method-item" @click="handleCodeLogin">
-            <span class="method-icon">📧</span>
-            <span class="method-text">验证码登录</span>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- 底部说明 -->
     <div class="footer-section">
       <p class="footer-text">
         未注册工程师账号？
@@ -83,7 +61,6 @@
       </p>
     </div>
 
-    <!-- Toast -->
     <div class="toast" v-if="toastShow">
       <span>{{ toastMessage }}</span>
     </div>
@@ -156,14 +133,6 @@ function onRememberChange(e) {
 
 function handleForget() {
   showToast('请联系管理员重置密码')
-}
-
-function handlePhoneLogin() {
-  showToast('该功能开发中')
-}
-
-function handleCodeLogin() {
-  showToast('该功能开发中')
 }
 
 function handleRegister() {
@@ -282,49 +251,6 @@ function handleRegister() {
   &.disabled {
     opacity: 0.7;
     cursor: not-allowed;
-  }
-}
-
-.other-methods {
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
-
-    .divider-line {
-      flex: 1;
-      height: 1px;
-      background: #e8e8e8;
-    }
-
-    .divider-text {
-      font-size: 13px;
-      color: #999;
-    }
-  }
-
-  .methods {
-    display: flex;
-    justify-content: center;
-    gap: 32px;
-  }
-
-  .method-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-
-    .method-icon {
-      font-size: 32px;
-    }
-
-    .method-text {
-      font-size: 13px;
-      color: #666;
-    }
   }
 }
 

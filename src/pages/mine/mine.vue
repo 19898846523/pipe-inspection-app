@@ -1,6 +1,5 @@
 <template>
   <div class="container">
-    <!-- 用户头部 -->
     <header class="user-header">
       <div class="header-content">
         <div class="avatar-section">
@@ -20,7 +19,6 @@
       </div>
     </header>
 
-    <!-- 统计数据 -->
     <div class="stats-section">
       <div class="stat-item">
         <span class="stat-value">{{ stats.uploadCount }}</span>
@@ -38,7 +36,6 @@
       </div>
     </div>
 
-    <!-- 功能菜单 -->
     <div class="menu-section">
       <div class="menu-group">
         <span class="group-title">我的服务</span>
@@ -53,36 +50,9 @@
             <span class="menu-text">我的跟进</span>
             <span class="menu-arrow">›</span>
           </div>
-          <div class="menu-item" @click="goToFavorites">
-            <span class="menu-icon">⭐</span>
-            <span class="menu-text">我的收藏</span>
-            <span class="menu-arrow">›</span>
-          </div>
         </div>
       </div>
 
-      <div class="menu-group">
-        <span class="group-title">设置</span>
-        <div class="menu-list">
-          <div class="menu-item" @click="goToSettings">
-            <span class="menu-icon">⚙️</span>
-            <span class="menu-text">通用设置</span>
-            <span class="menu-arrow">›</span>
-          </div>
-          <div class="menu-item" @click="goToAbout">
-            <span class="menu-icon">ℹ️</span>
-            <span class="menu-text">关于我们</span>
-            <span class="menu-arrow">›</span>
-          </div>
-          <div class="menu-item" @click="handleFeedback">
-            <span class="menu-icon">💬</span>
-            <span class="menu-text">意见反馈</span>
-            <span class="menu-arrow">›</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 登录/登出按钮 -->
       <div class="auth-section">
         <button
           v-if="!isLoggedIn"
@@ -101,12 +71,10 @@
       </div>
     </div>
 
-    <!-- 版本信息 -->
     <div class="version-section">
       <span class="version">Version 1.0.0</span>
     </div>
 
-    <!-- 底部导航 -->
     <nav class="tabbar">
       <div class="tab-item" :class="{ active: activeTab === 'index' }" @click="switchTab('index')">
         <span class="tab-icon">🏠</span>
@@ -205,51 +173,30 @@ async function executeLogout() {
   // 先关闭弹窗
   showLogoutModal.value = false
 
-  // 执行退出逻辑 (如果你在 userStore.logout 里加了请求后端的逻辑，建议加上 await)
+  // 执行退出逻辑
   await userStore.logout()
 
   // 清空本页面的统计数据
   stats.value = { uploadCount: 0, viewCount: 0, followUpCount: 0 }
 
-  // 提示 (可以换成你自己封装的 Toast)
+  // 提示
   showToast('已退出登录')
-  // 若想跳回登录页，可以加上 router.push('/login')
 }
 
 function goToMyUploads() {
   if (!isLoggedIn.value) {
-    alert('请先登录')
+    showToast('请先登录')
     return
   }
-  alert('功能开发中')
+  router.push('/my-uploads')
 }
 
 function goToFollowUp() {
   if (!isLoggedIn.value) {
-    alert('请先登录')
+    showToast('请先登录')
     return
   }
-  alert('功能开发中')
-}
-
-function goToFavorites() {
-  if (!isLoggedIn.value) {
-    alert('请先登录')
-    return
-  }
-  alert('功能开发中')
-}
-
-function goToSettings() {
-  alert('功能开发中')
-}
-
-function goToAbout() {
-  alert('功能开发中')
-}
-
-function handleFeedback() {
-  alert('如有问题或建议，请联系：support@pipe-patrol.com')
+  showToast('功能开发中')
 }
 
 function switchTab(tab) {
@@ -481,7 +428,8 @@ function switchTab(tab) {
     }
   }
 }
-/* ======= 新增：弹窗的样式 ======= */
+
+/* ======= 弹窗的样式 ======= */
 .custom-modal-overlay {
   position: fixed;
   top: 0;
@@ -548,11 +496,12 @@ function switchTab(tab) {
   }
 
   .btn-confirm {
-    color: #ff4d4f; /* 既然是退出操作，确定按钮使用红色比较合适 */
+    color: #ff4d4f;
     font-weight: bold;
   }
 }
-/* ======= 新增：Toast 提示框的样式 ======= */
+
+/* ======= Toast 提示框的样式 ======= */
 .toast {
   position: fixed;
   top: 50%;
@@ -563,9 +512,9 @@ function switchTab(tab) {
   padding: 10px 20px;
   border-radius: 6px;
   font-size: 14px;
-  z-index: 10000; /* 层级要比 modal 高，防止被遮挡 */
+  z-index: 10000;
   text-align: center;
-  pointer-events: none; /* 防止点击阻挡 */
+  pointer-events: none;
   animation: fadeIn 0.2s ease-in-out;
 }
 

@@ -47,17 +47,6 @@
           input-align="right"
           @click="showPicker.eventLevel = true"
         />
-
-        <van-field
-          v-model="fieldDisplay.eventFlag"
-          is-link
-          readonly
-          label="事件状态"
-          placeholder="请选择事件状态"
-          required
-          input-align="right"
-          @click="showPicker.eventFlag = true"
-        />
       </div>
     </section>
 
@@ -82,14 +71,6 @@
         :columns="dictColumns.eventLevel"
         @confirm="onConfirmEventLevel"
         @cancel="showPicker.eventLevel = false"
-      />
-    </van-popup>
-
-    <van-popup v-model:show="showPicker.eventFlag" position="bottom">
-      <van-picker
-        :columns="dictColumns.eventFlag"
-        @confirm="onConfirmEventFlag"
-        @cancel="showPicker.eventFlag = false"
       />
     </van-popup>
 
@@ -188,7 +169,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { post, get } from '@/utils/request' // 【修改】补充引入 get 方法
+import { post, get } from '@/utils/request'
 import { getCurrentLocation } from '@/utils/location'
 
 const router = useRouter()
@@ -198,9 +179,8 @@ const formData = ref({
   content: '',
   domain: '',
   eventType: '',
-  eventFlag: '',
   eventLevel: '',
-  areaCode: '', // 存储最详尽区域的 value
+  areaCode: '',
   address: '',
   latitude: 0,
   longitude: 0,
@@ -217,35 +197,30 @@ const fieldDisplay = ref({
   domain: '',
   eventType: '',
   eventLevel: '',
-  eventFlag: '',
-  area: '' // 【新增】用于显示拼接后的区域文本，如：湖北省/恩施...
+  area: ''
 })
 
 const showPicker = ref({
   domain: false,
   eventType: false,
   eventLevel: false,
-  eventFlag: false,
-  area: false // 【新增】控制区域选择弹窗
+  area: false
 })
 
 const dictColumns = ref({
   domain: [],
   eventType: [],
-  eventLevel: [],
-  eventFlag: []
+  eventLevel: []
 })
 
-// 【新增】区域树数据
 const areaTreeOptions = ref([])
 
 onMounted(() => {
   loadAllDicts()
   setDefaultTime()
-  loadAreaTree() // 【新增】加载区域树数据
+  loadAreaTree()
 })
 
-// --- 核心逻辑：获取字典与区域数据 ---
 async function fetchDict(dictCode) {
   try {
     const res = await post('/sys-dict/listDictItem', { dictCode })
@@ -261,41 +236,34 @@ async function fetchDict(dictCode) {
 
 async function loadAllDicts() {
   try {
-    // 改为 await 逐个请求，上一个请求完成后再发下一个
     const domainRes = await fetchDict('DOMAIN')
     const eventTypeRes = await fetchDict('EVENT_TYPE')
     const eventLevelRes = await fetchDict('EVENT_LEVEL')
-    const eventFlagRes = await fetchDict('EVENT_FLAG')
 
     dictColumns.value.domain = domainRes.map(item => ({ text: item.itemText, value: item.itemValue }))
     dictColumns.value.eventType = eventTypeRes.map(item => ({ text: item.itemText, value: item.itemValue }))
     dictColumns.value.eventLevel = eventLevelRes.map(item => ({ text: item.itemText, value: item.itemValue }))
-    dictColumns.value.eventFlag = eventFlagRes.map(item => ({ text: item.itemText, value: item.itemValue }))
   } catch (error) {
     console.error('加载字典失败:', error)
   }
 }
 
-// 递归清理函数：消除空的 children 数组
 function cleanChildren(data) {
   if (!data || data.length === 0) return
   data.forEach(item => {
-    // 如果 children 是空数组，则直接删除该属性，标记为最末端
     if (item.children && item.children.length === 0) {
       delete item.children
     } else if (item.children && item.children.length > 0) {
-      // 如果还有子项，继续递归
       cleanChildren(item.children)
     }
   })
 }
-// 【新增】获取区域树数据
+
 async function loadAreaTree() {
   try {
     const res = await get('/sys-area/getMyTree')
     if (res.status === 200 && res.data) {
       const treeData = res.data
-      // 在赋值前进行清理
       cleanChildren(treeData)
       areaTreeOptions.value = treeData
     }
@@ -304,7 +272,6 @@ async function loadAreaTree() {
   }
 }
 
-// 选择确认回调
 const onConfirmDomain = ({ selectedOptions }) => {
   formData.value.domain = selectedOptions[0].value
   fieldDisplay.value.domain = selectedOptions[0].text
@@ -323,30 +290,19 @@ const onConfirmEventLevel = ({ selectedOptions }) => {
   showPicker.value.eventLevel = false
 }
 
-const onConfirmEventFlag = ({ selectedOptions }) => {
-  formData.value.eventFlag = selectedOptions[0].value
-  fieldDisplay.value.eventFlag = selectedOptions[0].text
-  showPicker.value.eventFlag = false
-}
-
-// 当用户每选一级时就触发（预防用户选完不点确定或直接点击空白处）
 const onChangeArea = ({ selectedOptions }) => {
   if (selectedOptions.length > 0) {
-    // 实时更新显示文本
     fieldDisplay.value.area = selectedOptions.map(option => option.label).join('/')
-    // 实时保存当前的 code
     formData.value.areaCode = selectedOptions[selectedOptions.length - 1].value
   }
 }
-// 【新增】区域级联选择完成回调
+
 const onFinishArea = ({ selectedOptions }) => {
   showPicker.value.area = false
-  // 确保最终值和文本被正确记录
   fieldDisplay.value.area = selectedOptions.map(option => option.label).join('/')
   formData.value.areaCode = selectedOptions[selectedOptions.length - 1].value
 }
 
-// --- 辅助方法 ---
 function showToast(message) {
   toastMessage.value = message
   toastShow.value = true
@@ -379,7 +335,7 @@ async function handleSubmit() {
   if (!formData.value.title) return showToast('请输入事件标题')
   if (!formData.value.domain) return showToast('请选择领域')
   if (!formData.value.eventType) return showToast('请选择事件类别')
-  if (!formData.value.areaCode) return showToast('请选择事件区域') // 【修改】增加校验
+  if (!formData.value.areaCode) return showToast('请选择事件区域')
   if (!formData.value.latitude) return showToast('请获取位置信息')
 
   submitting.value = true
@@ -394,7 +350,6 @@ async function handleSubmit() {
     } else {
       payload.occurEnd = null
     }
-    delete payload.eventFlag
 
     const res = await post('/opt-event/save', payload)
 
@@ -416,7 +371,6 @@ async function handleSubmit() {
 </script>
 
 <style lang="scss" scoped>
-/* 保持原有样式不变 */
 .container {
   min-height: 100vh;
   background: #f4f6f8;
