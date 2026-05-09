@@ -139,7 +139,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { getCurrentLocation, formatLocation } from '@/utils/location'
-import { get } from '@/utils/request'
+import { post } from '@/utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -204,43 +204,66 @@ async function loadMessages(isRefresh = false) {
 
   loading.value = true
   try {
-    // 模拟数据
-    const mockData = generateMockData(isRefresh ? 1 : currentPage.value)
-
-    if (isRefresh) {
-      messageList.value = mockData
-    } else {
-      messageList.value = [...messageList.value, ...mockData]
+    const targetPage = isRefresh ? 1 : currentPage.value
+    // 构造真实接口所需的参数
+    const params = {
+      action: "grsb",
+      domain: "",
+      eventLevel: "",
+      eventType: "",
+      flag: "",
+      occurEndBetween: "",
+      occurStartBetween: "",
+      pageNo: targetPage,
+      pageSize: pageSize.value,
+      titleLike: searchKeyword.value // 绑定搜索框的值
     }
 
-    noMore.value = mockData.length < pageSize.value
+    const res = await post('/opt-event/page', params)
+
+    if (res && res.status === 200 && res.data) {
+      const records = res.data.records || []
+
+      // 字段映射：将后端真实字段转换为模板所需的字段格式
+      const realData = records.map(item => {
+        // 推导状态
+        let currentStatus = 'pending'
+        if (item.flag === '1') currentStatus = 'processing'
+        if (item.flag === '2') currentStatus = 'completed'
+
+        return {
+          id: item.id,
+          uploaderName: item.userName || '未知用户',
+          userType: '路人', // 根据业务可改为判断逻辑
+          createTime: item.reportTime, // 后端返回的时间字符串
+          longitude: item.longitude,
+          latitude: item.latitude,
+          address: item.address || item.areaNames_label || '未知位置',
+          images: [], // 列表接口未返回图片，设为空
+          description: item.content || item.title || '暂无描述',
+          status: currentStatus,
+          viewCount: 0,
+          rawItem: item // 将完整原始数据保存下来，跳转详情时用
+        }
+      })
+
+      if (isRefresh) {
+        messageList.value = realData
+        currentPage.value = 1
+      } else {
+        messageList.value = [...messageList.value, ...realData]
+      }
+
+      noMore.value = records.length < pageSize.value
+    } else {
+      console.error('获取首页列表失败:', res?.message)
+    }
   } catch (e) {
     console.error('加载失败:', e)
   } finally {
     loading.value = false
     refreshing.value = false
   }
-}
-
-// 生成模拟数据
-function generateMockData(page) {
-  const types = ['路人', '工程师']
-  const statuses = ['pending', 'processing', 'completed']
-  const addresses = ['北京市朝阳区 xx 路', '上海市浦东新区 xx 街', '广州市天河区 xx 道', '深圳市南山区 xx 巷']
-
-  return Array.from({ length: page === 1 ? 5 : pageSize.value }, (_, i) => ({
-    id: `mock-${page}-${i}`,
-    uploaderName: types[i % 2] === '工程师' ? `工程师${i + 1}` : `路人${i + 1}`,
-    userType: types[i % 2],
-    createTime: Date.now() - i * 3600000,
-    longitude: 116.397428 + Math.random() * 0.1,
-    latitude: 39.90923 + Math.random() * 0.1,
-    address: addresses[i % addresses.length],
-    images: i % 3 === 0 ? ['/static/demo1.jpg', '/static/demo2.jpg'] : [],
-    description: i % 2 === 0 ? '发现一处管网破损，需要及时处理' : '',
-    status: statuses[i % 3],
-    viewCount: Math.floor(Math.random() * 100)
-  }))
 }
 
 // 下拉刷新（简化版）
@@ -269,15 +292,19 @@ function handleSearch() {
 // 格式化时间
 function formatTime(timestamp) {
   if (!timestamp) return ''
+  // 转换字符串为时间戳
+  const timeNum = typeof timestamp === 'string' ? new Date(timestamp.replace(/-/g, '/')).getTime() : timestamp
+  if (isNaN(timeNum)) return timestamp
+
   const now = Date.now()
-  const diff = now - timestamp
+  const diff = now - timeNum
 
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
   if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
 
-  const date = new Date(timestamp)
+  const date = new Date(timeNum)
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
@@ -314,6 +341,8 @@ function goToUpload() {
 
 // 跳转详情
 function goToDetail(item) {
+  // 把真正的后端原始数据 item.rawItem 存入 sessionStorage 供 detail.vue 解析
+  sessionStorage.setItem('currentEventDetail', JSON.stringify(item.rawItem))
   router.push({ path: '/detail', query: { id: item.id } })
 }
 </script>

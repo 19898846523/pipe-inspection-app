@@ -35,6 +35,7 @@ F:\文件\管网 APP\
 │   │   ├── login/          # 工程师登录
 │   │   ├── mine/           # 个人中心
 │   │   ├── map/            # 地图页
+│   │   ├── my_upload/      # 我的上传
 │   │   └── detail/         # 详情页
 │   ├── router/             # 路由配置
 │   ├── store/              # Pinia 状态管理

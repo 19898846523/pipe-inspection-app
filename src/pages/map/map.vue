@@ -114,6 +114,7 @@ import { ref, computed, onMounted, onUnmounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import { formatLocation } from '@/utils/location'
+import { post } from '@/utils/request'
 
 const router = useRouter()
 
@@ -201,47 +202,69 @@ function locateUser() {
 }
 
 // 加载标记点
-function loadMarkers() {
+async function loadMarkers() {
   const AMap = AMapInstance.value
-  // 模拟数据 (注意高德使用的是 GCJ-02 坐标)
-  const mockData = [
-    {
-      id: '1',
-      latitude: 39.908823,
-      longitude: 116.397476,
-      address: '北京市朝阳区 xx 路 1 号',
-      createTime: Date.now() - 3600000,
-      uploaderName: '工程师 1',
-      userType: '工程师',
-      images: ['/static/demo1.jpg'],
-      description: '管网破损'
+
+  try {
+    // 为了在地图上显示更多点位，我们把 pageSize 设大一点 (比如 50)
+    const params = {
+      action: "grsb",
+      domain: "", eventLevel: "", eventType: "", flag: "",
+      occurEndBetween: "", occurStartBetween: "", titleLike: "",
+      pageNo: 1,
+      pageSize: 50
     }
-    // ... 其他 mock 数据 ...
-  ]
 
-  nearbyList.value = mockData
+    const res = await post('/opt-event/page', params)
 
-  // 清除旧标记
-  map.value.remove(markers)
-  markers = []
+    if (res && res.status === 200 && res.data) {
+      const records = res.data.records || []
 
-  mockData.forEach(item => {
-    const marker = new AMap.Marker({
-      position: [item.longitude, item.latitude],
-      title: item.address,
-      map: map.value
-    })
+      // 过滤掉没有经纬度的脏数据，并进行字段映射
+      const realData = records
+        .filter(item => item.longitude && item.latitude)
+        .map(item => {
+          return {
+            id: item.id,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            address: item.address || item.areaNames_label || '未知位置',
+            createTime: item.reportTime, // 接口的时间字符串
+            uploaderName: item.userName || '未知用户',
+            userType: '路人',
+            images: [],
+            description: item.content || item.title || '暂无描述',
+            rawItem: item
+          }
+        })
 
-    marker.on('click', () => {
-      selectItem(item)
-    })
+      nearbyList.value = realData
 
-    markers.push(marker)
-  })
+      // 清除旧标记
+      map.value.remove(markers)
+      markers = []
 
-  // 自动缩放以展示所有标记
-  if (markers.length > 0) {
-    map.value.setFitView(markers)
+      realData.forEach(item => {
+        const marker = new AMap.Marker({
+          position: [item.longitude, item.latitude],
+          title: item.address,
+          map: map.value
+        })
+
+        marker.on('click', () => {
+          selectItem(item)
+        })
+
+        markers.push(marker)
+      })
+
+      // 自动缩放以展示所有标记
+      if (markers.length > 0) {
+        map.value.setFitView(markers)
+      }
+    }
+  } catch (error) {
+    console.error('地图点位获取失败:', error)
   }
 }
 
@@ -300,7 +323,10 @@ function callUploader() {
 // 格式化时间
 function formatTime(timestamp) {
   if (!timestamp) return ''
-  const diff = Date.now() - timestamp
+  const timeNum = typeof timestamp === 'string' ? new Date(timestamp.replace(/-/g, '/')).getTime() : timestamp
+  if (isNaN(timeNum)) return timestamp
+
+  const diff = Date.now() - timeNum
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
   return `${Math.floor(diff / 86400000)}天前`
@@ -308,8 +334,10 @@ function formatTime(timestamp) {
 
 function formatFullTime(timestamp) {
   if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN')
+  // 兼容 iOS/Safari 等对 "YYYY-MM-DD" 不友好的时间格式
+  const date = typeof timestamp === 'string' ? new Date(timestamp.replace(/-/g, '/')) : new Date(timestamp)
+  if (isNaN(date.getTime())) return timestamp
+  return date.toLocaleString('zh-CN', { hour12: false })
 }
 
 function switchTab(tab) {
@@ -491,7 +519,7 @@ function switchTab(tab) {
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: flex-end;
-  z-index: 1000;
+  z-index: 2000;
 
   .modal-content {
     background: white;
