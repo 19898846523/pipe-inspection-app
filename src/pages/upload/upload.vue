@@ -1,5 +1,6 @@
 <template>
   <div class="container">
+
     <section class="section">
       <div class="section-header">
         <span class="icon">📋</span>
@@ -142,21 +143,11 @@
       />
       <span class="char-count">{{ formData.content.length }}/500</span>
 
-      <div class="image-uploader mt-12">
-        <div class="image-item" v-for="(img, index) in images" :key="index">
-          <img class="image" :src="img" @click="previewImage(index)" />
-          <div class="delete-btn" @click="deleteImage(index)">×</div>
-        </div>
-        <div class="upload-btn" v-if="images.length < 9" @click="chooseImage">
-          <span class="upload-icon">＋</span>
-          <span class="upload-text">上传照片</span>
-        </div>
-      </div>
-    </section>
+      </section>
 
     <div class="submit-section">
       <button class="submit-btn" :class="{ disabled: submitting }" @click="handleSubmit">
-        {{ submitting ? '提交中...' : '立即上报' }}
+        {{ submitting ? '提交中...' : '立即上报并上传照片' }}
       </button>
     </div>
 
@@ -188,7 +179,6 @@ const formData = ref({
   occurEnd: ''
 })
 
-const images = ref([])
 const submitting = ref(false)
 const toastShow = ref(false)
 const toastMessage = ref('')
@@ -325,12 +315,6 @@ async function getLocation() {
   }
 }
 
-function chooseImage() { /* ... */ }
-function previewImage(index) { /* ... */ }
-function deleteImage(index) {
-  if (confirm('确定删除吗？')) images.value.splice(index, 1)
-}
-
 async function handleSubmit() {
   if (!formData.value.title) return showToast('请输入事件标题')
   if (!formData.value.domain) return showToast('请选择领域')
@@ -342,22 +326,56 @@ async function handleSubmit() {
 
   try {
     const payload = { ...formData.value }
-    if (payload.occurStart) {
-      payload.occurStart = payload.occurStart.replace('T', ' ') + ':00'
-    }
-    if (payload.occurEnd) {
-      payload.occurEnd = payload.occurEnd.replace('T', ' ') + ':00'
-    } else {
-      payload.occurEnd = null
-    }
+    if (payload.occurStart) payload.occurStart = payload.occurStart.replace('T', ' ') + ':00'
+    if (payload.occurEnd) payload.occurEnd = payload.occurEnd.replace('T', ' ') + ':00'
+    else payload.occurEnd = null
 
+    // 1. 保存基本信息
     const res = await post('/opt-event/save', payload)
 
     if (res.status === 200) {
-      showToast('上报成功')
+      showToast('基本信息上报成功，正在准备上传图片...')
+
+      let eventId = res.data?.id || (typeof res.data === 'string' ? res.data : null)
+
+      // 2. 效仿 Python 脚本：如果接口没有直接返回 ID，则通过列表接口去查询刚刚创建的记录
+      if (!eventId) {
+        const pageRes = await post('/opt-event/page', {
+          action: "grsb",
+          pageNo: 1,
+          pageSize: 10,
+          titleLike: payload.title // 通过唯一的标题去反查
+        })
+
+        if (pageRes.status === 200 && pageRes.data?.records?.length > 0) {
+          // 精确匹配刚刚上报的标题
+          const target = pageRes.data.records.find(r => r.title === payload.title)
+          if (target) {
+            eventId = target.id
+          }
+        }
+      }
+
+      if (!eventId) {
+        showToast('上报成功，但未获取到事件ID，无法跳转上传图片')
+        setTimeout(() => router.back(), 2000)
+        return
+      }
+
+      // 3. 跳转至图片上传页面，携带必需的关联参数
       setTimeout(() => {
-        router.back()
-      }, 1500)
+        router.push({
+          path: '/event-image-upload', // 请在 router/index.js 中配置此路由
+          query: {
+            id: eventId,
+            title: payload.title,
+            content: payload.content,
+            domain: payload.domain,
+            eventType: payload.eventType
+          }
+        })
+      }, 1000)
+
     } else {
       showToast(res.message || '上报失败')
     }

@@ -18,6 +18,12 @@ const routes = [
     meta: { title: '上报信息' }
   },
   {
+    path: '/event-image-upload',
+    name: 'event-image-upload',
+    component: () => import('@/pages/upload/event_image_upload.vue'),
+    meta: { title: '上传现场照片' }
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('@/pages/login/login.vue'),

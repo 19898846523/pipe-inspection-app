@@ -403,6 +403,8 @@ function switchTab(tab) {
   overflow: hidden;
   z-index: 1001;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 
   &.expanded {
     max-height: 60vh;
@@ -413,6 +415,7 @@ function switchTab(tab) {
     display: flex;
     justify-content: center;
     cursor: pointer;
+    flex-shrink: 0;
 
     .handle-bar {
       width: 40px;
@@ -428,6 +431,7 @@ function switchTab(tab) {
     align-items: center;
     padding: 0 16px 12px;
     border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
 
     .header-title {
       font-size: 16px;
@@ -443,7 +447,7 @@ function switchTab(tab) {
   }
 
   .sheet-content {
-    height: 100%;
+    flex: 1;
     overflow-y: auto;
     padding: 0 16px 16px;
   }

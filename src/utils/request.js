@@ -197,7 +197,7 @@ export function upload(url, file, formData = {}) {
     try {
       const token = JSON.parse(userInfo).token
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+        headers['Authorization'] = token
       }
     } catch (e) {}
   }
