@@ -183,6 +183,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
+import { post } from '@/utils/request'
 // import { formatLocation } from '@/utils/location' // 如果未使用可移除
 
 const userStore = useUserStore()
@@ -279,6 +280,8 @@ function loadDetail() {
           content: item.content || '暂无详细描述',
           status: currentStatus
         }
+        //调用接口获取当前事件关联的图片
+        fetchEventImages(item)
         return // 成功加载后直接返回
       }
     } catch (error) {
@@ -290,6 +293,46 @@ function loadDetail() {
   alert('未能获取到事件详情数据，请返回列表重新点击')
 }
 
+// ✨ 修改后的获取图片方法
+async function fetchEventImages(item) {
+  try {
+    const payload = {
+      ext1: "event-img",
+      ext2: item.domain || "",
+      ext3: item.eventType || "",
+      reportNo: String(item.id)
+    }
+
+    const res = await post('/sys-file/list', payload)
+
+    if (res && res.status === 200 && res.data) {
+      const imageUrls = res.data.map(file => {
+        // 后端可能用不同的字段名返回路径
+        const imgPath = file.url || file.filePath || file.link
+
+        if (!imgPath) return null
+
+        // 1. 如果后端直接返回了完整的 http/https 绝对路径，直接使用
+        if (imgPath.startsWith('http://') || imgPath.startsWith('https://')) {
+           return imgPath
+        }
+
+        // 2. 如果是相对路径或纯文件名，强制拼接后端服务器基础地址
+        // 判断原路径前是否有斜杠，防止拼出双斜杠或缺少斜杠
+        const prefix = imgPath.startsWith('/') ? '' : '/'
+
+        // 拼接上后端的外网地址
+        const MINIO_BASE_URL = 'http://123.60.186.220:9000'
+        return `${MINIO_BASE_URL}${prefix}${imgPath}`
+
+      }).filter(url => Boolean(url))
+
+      detail.value.images = imageUrls
+    }
+  } catch (error) {
+    console.error('获取事件图片失败', error)
+  }
+}
 // 预览图片
 function previewImage(index) {
   const preview = document.createElement('div')
