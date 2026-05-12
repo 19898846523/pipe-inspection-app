@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div class="image-section" v-if="detail.images && detail.images.length > 0">
-      <div class="swiper">
+      <div class="swiper" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
         <div class="swiper-wrapper" :style="swiperStyle">
           <div class="swiper-slide" v-for="(img, index) in detail.images" :key="index">
             <img class="swiper-image" :src="img" alt="" @click="previewImage(index)" />
@@ -181,7 +181,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { post } from '@/utils/request'
 // import { formatLocation } from '@/utils/location' // 如果未使用可移除
@@ -217,6 +217,9 @@ const isFavorite = ref(false)
 const isEngineer = ref(false)
 const currentSlide = ref(0)
 
+const touchStartX = ref(0)
+const touchEndX = ref(0)
+let timer = null
 onMounted(() => {
   userStore.loadUser()
   isEngineer.value = userStore.isEngineer
@@ -234,7 +237,65 @@ onMounted(() => {
 const swiperStyle = computed(() => ({
   transform: `translateX(-${currentSlide.value * 100}%)`
 }))
+// 3. 封装开启和关闭自动轮播的方法
+function startAutoPlay() {
+  stopAutoPlay()
+  timer = setInterval(() => {
+    if (detail.value.images && detail.value.images.length > 1) {
+      currentSlide.value = (currentSlide.value + 1) % detail.value.images.length
+    }
+  }, 3000)
+}
 
+function stopAutoPlay() {
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
+}
+// 4. 新增触摸事件处理方法
+function handleTouchStart(e) {
+  stopAutoPlay() // 触摸时暂停自动轮播
+  touchStartX.value = e.touches[0].clientX
+  touchEndX.value = e.touches[0].clientX // 初始化 EndX
+}
+
+function handleTouchMove(e) {
+  touchEndX.value = e.touches[0].clientX
+}
+
+function handleTouchEnd() {
+  const distance = touchEndX.value - touchStartX.value
+  const threshold = 50 // 设置滑动生效的阈值（像素）
+  const imgCount = detail.value.images?.length || 0
+
+  if (imgCount > 1) {
+    if (distance > threshold) {
+      // 向右滑，看上一张
+      currentSlide.value = currentSlide.value === 0 ? imgCount - 1 : currentSlide.value - 1
+    } else if (distance < -threshold) {
+      // 向左滑，看下一张
+      currentSlide.value = (currentSlide.value + 1) % imgCount
+    }
+  }
+
+  startAutoPlay() // 触摸结束，恢复自动轮播
+}
+
+// 5. 修改原有的生命周期钩子
+onMounted(() => {
+  userStore.loadUser()
+  isEngineer.value = userStore.isEngineer
+  loadDetail()
+
+  // 替换为你封装的自动轮播启动方法
+  startAutoPlay()
+})
+
+// 添加销毁时的清理操作，防止内存泄漏
+onUnmounted(() => {
+  stopAutoPlay()
+})
 // 修改 detail.vue 中的 loadDetail 方法
 function loadDetail() {
   const params = new URLSearchParams(window.location.hash.split('?')[1])
