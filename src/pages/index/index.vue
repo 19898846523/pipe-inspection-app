@@ -1,6 +1,5 @@
 <template>
   <div class="container">
-    <!-- 顶部状态栏 -->
     <header class="header">
       <div class="location-info" @click="refreshLocation">
         <span class="icon">📍</span>
@@ -12,30 +11,31 @@
       </div>
     </header>
 
-    <!-- 搜索栏 -->
     <div class="search-bar">
       <div class="search-input">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon" @click="handleSearch">🔍</span>
         <input
           type="text"
-          placeholder="搜索上报记录"
-          class="placeholder"
+          placeholder="输入事件标题关键字搜索"
           v-model="searchKeyword"
           @keyup.enter="handleSearch"
         />
+        <span
+          class="clear-icon"
+          v-show="searchKeyword"
+          @click="clearSearch"
+        >✖</span>
       </div>
+      <button class="search-btn" @click="handleSearch">搜索</button>
     </div>
 
-    <!-- 消息列表 -->
     <div class="message-list" ref="listRef" @scroll="handleScroll">
-      <!-- 空状态 -->
       <div v-if="messageList.length === 0 && !loading" class="empty-state">
         <div class="empty-image">📭</div>
         <p class="empty-text">暂无上报记录</p>
         <button class="upload-btn" @click="goToUpload">立即上报</button>
       </div>
 
-      <!-- 消息卡片 -->
       <div
         v-for="item in messageList"
         :key="item.id"
@@ -43,30 +43,29 @@
         @click="goToDetail(item)"
       >
         <div class="card-header">
-          <div class="user-info">
-            <div v-if="item.avatar" class="avatar">
-              <img :src="item.avatar" alt="" />
-            </div>
-            <div v-else class="avatar-default">{{ item.uploaderName?.charAt(0) || '路' }}</div>
-            <div class="uploader">
-              <span class="name">{{ item.uploaderName || '匿名用户' }}</span>
-              <span class="role" :class="item.userType">{{ item.userType || '路人' }}</span>
-            </div>
-          </div>
+          <h3 class="event-title">{{ item.title }}</h3>
           <span class="time">{{ formatTime(item.createTime) }}</span>
         </div>
 
         <div class="card-content">
-          <div class="location">
-            <span class="icon">📍</span>
-            <span class="location-text">{{ item.address || '未知位置' }}</span>
+          <div class="info-row">
+            <span class="icon">👤</span>
+            <span class="info-text">
+              {{ item.uploaderName || '匿名用户' }}
+              <span class="role-tag" :class="item.userType">{{ item.userType || '路人' }}</span>
+            </span>
           </div>
-          <div class="coordinates" v-if="item.longitude && item.latitude">
+
+          <div class="info-row location">
+            <span class="icon">📍</span>
+            <span class="info-text">{{ item.address || '未知位置' }}</span>
+          </div>
+
+          <div class="info-row coordinates" v-if="item.longitude && item.latitude">
             <span class="label">经纬度：</span>
             <span class="value">{{ formatLocation(item.longitude, item.latitude) }}</span>
           </div>
 
-          <!-- 图片预览 -->
           <div class="images" v-if="item.images && item.images.length > 0">
             <div
               v-for="(img, index) in item.images"
@@ -78,10 +77,7 @@
             </div>
           </div>
 
-          <div class="description" v-if="item.description">
-            <p class="desc-text">{{ item.description }}</p>
           </div>
-        </div>
 
         <div class="card-footer">
           <div class="status" :class="item.status">
@@ -94,23 +90,19 @@
         </div>
       </div>
 
-      <!-- 加载状态 -->
       <div class="loading-state" v-if="loading">
         <span class="loading-text">加载中...</span>
       </div>
 
-      <!-- 没有更多 -->
       <div class="no-more" v-if="noMore">
         <span class="no-more-text">没有更多了</span>
       </div>
     </div>
 
-    <!-- 悬浮按钮 -->
     <div class="fab-btn" @click="goToUpload">
       <span class="fab-icon">➕</span>
     </div>
 
-    <!-- 底部导航 -->
     <nav class="tabbar">
       <div class="tab-item" :class="{ active: activeTab === 'index' }" @click="switchTab('index')">
         <span class="tab-icon">🏠</span>
@@ -126,7 +118,6 @@
       </div>
     </nav>
 
-    <!-- 图片预览 -->
     <div class="image-preview" v-if="showPreview" @click="closePreview">
       <button class="close-btn" @click.stop="closePreview">×</button>
       <img :src="previewUrl" alt="" />
@@ -226,24 +217,24 @@ async function loadMessages(isRefresh = false) {
 
       // 字段映射：将后端真实字段转换为模板所需的字段格式
       const realData = records.map(item => {
-        // 推导状态
         let currentStatus = 'pending'
         if (item.flag === '1') currentStatus = 'processing'
         if (item.flag === '2') currentStatus = 'completed'
 
         return {
           id: item.id,
+          title: item.title || '无标题事件', // 👈 新增这一行：确保标题被正确提取
           uploaderName: item.userName || '未知用户',
-          userType: '路人', // 根据业务可改为判断逻辑
-          createTime: item.reportTime, // 后端返回的时间字符串
+          userType: '路人',
+          createTime: item.reportTime,
           longitude: item.longitude,
           latitude: item.latitude,
           address: item.address || item.areaNames_label || '未知位置',
-          images: [], // 列表接口未返回图片，设为空
+          images: [],
           description: item.content || item.title || '暂无描述',
           status: currentStatus,
           viewCount: 0,
-          rawItem: item // 将完整原始数据保存下来，跳转详情时用
+          rawItem: item
         }
       })
 
@@ -288,7 +279,11 @@ function handleSearch() {
   currentPage.value = 1
   loadMessages(true)
 }
-
+// 新增：清空搜索并重新加载列表
+function clearSearch() {
+  searchKeyword.value = ''
+  handleSearch()
+}
 // 格式化时间
 function formatTime(timestamp) {
   if (!timestamp) return ''
@@ -391,20 +386,25 @@ function goToDetail(item) {
 }
 
 .search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   background: white;
 }
 
 .search-input {
   display: flex;
+  flex: 1;
   align-items: center;
   background: #f5f5f5;
   border-radius: 20px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   gap: 8px;
 
   .search-icon {
     font-size: 16px;
+    cursor: pointer;
   }
 
   input {
@@ -413,10 +413,42 @@ function goToDetail(item) {
     background: transparent;
     border: none;
     outline: none;
+    width: 100%;
+    color: #333;
+
+    &::placeholder {
+      color: #999;
+    }
   }
 
-  .placeholder {
-    color: #999;
+  .clear-icon {
+    font-size: 12px;
+    color: #fff;
+    background: #ccc;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+}
+
+.search-btn {
+  background: #1890ff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+
+  &:active {
+    background: #096dd9;
+    transform: scale(0.95);
   }
 }
 
@@ -463,54 +495,56 @@ function goToDetail(item) {
   .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 12px;
 
-    .user-info {
+    .event-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin: 0;
+      flex: 1;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2; /* 限制标题最多显示两行 */
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      padding-right: 12px;
+    }
+
+    .time {
+      font-size: 12px;
+      color: #999;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+  }
+
+  .card-content {
+    /* 统一规范上报人、地理位置的行布局 */
+    .info-row {
       display: flex;
-      align-items: center;
-      gap: 8px;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 8px;
 
-      .avatar,
-      .avatar-default {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        overflow: hidden;
+      .icon {
+        font-size: 14px;
+        margin-top: 2px;
       }
 
-      .avatar-default {
-        background: #1890ff;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        font-weight: bold;
-      }
+      .info-text {
+        font-size: 14px;
+        color: #666;
+        line-height: 1.5;
 
-      .avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-
-      .uploader {
-        display: flex;
-        flex-direction: column;
-
-        .name {
-          font-size: 14px;
-          color: #333;
-          font-weight: 500;
-        }
-
-        .role {
+        /* 角色标签样式 */
+        .role-tag {
           font-size: 11px;
           padding: 2px 6px;
           border-radius: 4px;
-          margin-top: 2px;
-          width: fit-content;
+          margin-left: 6px;
+          vertical-align: middle;
 
           &.工程师 {
             background: #e6f7ff;
@@ -519,43 +553,19 @@ function goToDetail(item) {
 
           &.路人 {
             background: #f5f5f5;
-            color: #666;
+            color: #999;
           }
         }
       }
     }
 
-    .time {
-      font-size: 12px;
-      color: #999;
-    }
-  }
-
-  .card-content {
-    .location {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-bottom: 8px;
-
-      .location-text {
-        font-size: 14px;
-        color: #333;
-      }
-    }
-
     .coordinates {
       font-size: 12px;
-      color: #666;
-      margin-bottom: 8px;
+      padding-left: 20px; /* 对齐图标后的文字 */
+      margin-bottom: 12px;
 
-      .label {
-        color: #999;
-      }
-
-      .value {
-        color: #1890ff;
-      }
+      .label { color: #999; }
+      .value { color: #1890ff; }
     }
 
     .images {
@@ -578,16 +588,9 @@ function goToDetail(item) {
         }
       }
     }
-
-    .description {
-      .desc-text {
-        font-size: 14px;
-        color: #666;
-        line-height: 1.5;
-      }
-    }
   }
 
+  /* card-footer 保持你原有的样式即可 */
   .card-footer {
     display: flex;
     justify-content: space-between;
